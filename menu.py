@@ -1,7 +1,7 @@
 import nuke
-nuke.tprint('Loading silhouetteFXSExporter.py')
+nuke.tprint('Loading NukeFXSExporter.py')
 try:
-    from silhouetteFXSExporter import *
+    from NukeFXSExporter import *
 except:
     pass
 
