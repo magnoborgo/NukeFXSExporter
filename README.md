@@ -32,8 +32,9 @@ Feather not supported
 
 Select the Roto or Rotopaint node and run the script
 
-You can set a the default folder/file path on init.py or menu.py with the code below:
-os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile'
+You can set a the default folder/file path on init.py or menu.py with the code below:   
+
+    os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile'
 
 #### Licensing ####
 
