@@ -18,6 +18,9 @@ If you like it, use it frequently, or want to support further development please
 * Shape Open/Closed
 * Delete repeated baked keyframes when possible
 
+#### COMPATIBILITY ####
+
+Nukev7 and up
 
 #### KNOW LIMITATIONS ####
 
