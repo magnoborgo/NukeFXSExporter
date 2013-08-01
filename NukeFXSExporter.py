@@ -126,7 +126,7 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
     
     
     
-def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
+def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakeshapes):
     #===========================================================================
     # CHECK FOR 1 POINT SHAPE AND IGNORE IT
     #===========================================================================
@@ -293,26 +293,26 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
                 break                
             if cancel:
                 break
-            
             point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
             point_lt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.leftTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.leftTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
             point_rt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.rightTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.rightTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
-            
-            
             transf = shape[0].getTransform()
-            center_xy = rptsw_TransformToMatrix(point_c, transf, f)                    
-            center_xy = rptsw_TransformLayers(center_xy, shape[1], f, rotoRoot, rptsw_shapeList)
-            point_lt = rptsw_TransformToMatrix(point_lt, transf, f)  
-            point_lt  = rptsw_TransformLayers(point_lt, shape[1], f, rotoRoot, rptsw_shapeList)
-            point_rt = rptsw_TransformToMatrix(point_rt, transf, f)  
-            point_rt  = rptsw_TransformLayers(point_rt, shape[1], f, rotoRoot, rptsw_shapeList)
 
-            x = center_xy[0]
-            y = center_xy[1]
+            if bakeshapes: #bake the point position based on shape/parent layers transforms
+                point_c = rptsw_TransformToMatrix(point_c, transf, f)                    
+                point_c = rptsw_TransformLayers(point_c, shape[1], f, rotoRoot, rptsw_shapeList)
+                point_lt = rptsw_TransformToMatrix(point_lt, transf, f)  
+                point_lt  = rptsw_TransformLayers(point_lt, shape[1], f, rotoRoot, rptsw_shapeList)
+                point_rt = rptsw_TransformToMatrix(point_rt, transf, f)  
+                point_rt  = rptsw_TransformLayers(point_rt, shape[1], f, rotoRoot, rptsw_shapeList)
+
+            x = point_c[0]
+            y = point_c[1]
             ltx = point_lt[0]
             rtx = point_rt[0]
             lty = point_lt[1]
             rty = point_rt[1]
+
             x = worldToImageTransform(x,rotoNode,"x")
             y = worldToImageTransform(y,rotoNode,"y")  
             ltx = worldToImageTransform(ltx,rotoNode,"x")
@@ -428,11 +428,11 @@ def silhouetteFxsExporter():
                 if isinstance(shape[0], nuke.rotopaint.Shape):
                         createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         else:
-            for layer in rptsw_shapeList[::-1]:
-                if isinstance(layer[0], nuke.rotopaint.Layer):
-                    createLayers(layer,fRange, rotoNode, rptsw_shapeList,task, fxsExport)
-                if isinstance(layer[0], nuke.rotopaint.Shape):      
-                    createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
+            for item in rptsw_shapeList[::-1]:
+                if isinstance(item[0], nuke.rotopaint.Layer):
+                    createLayers(item,fRange, rotoNode, rptsw_shapeList,task, fxsExport)
+                if isinstance(item[0], nuke.rotopaint.Shape):      
+                    createShapes(item, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         rotoCurve.changed()
     else:
         nuke.message( 'Shape Exporter is for Nuke v7 only' )
