@@ -102,8 +102,31 @@ def parseShapeFlags(flags):
 
     return flaglist
 
-
-def bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
+def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
+    #===========================================================================
+    # <Layer type="Layer" id="0" label="Layer 1" selected="True" expanded="True" uuid="6BFA7E72-AB79-48A7-BC5A-079A8F5651C8">
+    #===========================================================================
+    global cancel
+    rotoCurve = rotoNode['curves']
+    rotoRoot = rotoCurve.rootLayer
+    transf = layer[0].getTransform()
+    allAttributes = layer[0].getAttributes()
+    fxsLayer = ET.SubElement(fxsExport,'Layer',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
+    fxsProperties = ET.SubElement(fxsLayer,'Properties')
+    #===========================================================================
+    # Layer color - Silhouette default color
+    #===========================================================================
+    fxsColor = ET.SubElement(fxsProperties, 'Property', {'constant':'True','id':'color'})
+    fxsColorValue = ET.SubElement(fxsColor, 'Value')
+    fxsColorValue.text = "(1.000000,1.000000,1.000000)"
+    #===========================================================================
+    # shape overlay color end
+    #===========================================================================
+    
+    
+    
+    
+def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
     #===========================================================================
     # CHECK FOR 1 POINT SHAPE AND IGNORE IT
     #===========================================================================
@@ -129,8 +152,6 @@ def bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
     ccshapeFlags  = parseShapeFlags(ccshapeFlags)
 #     flags = int(flags.split()[1])
     #===========================================================================
-    
-    
     global cancel
     count = 0
     rotoCurve = rotoNode['curves']
@@ -149,14 +170,11 @@ def bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
     #===========================================================================
     # visibility end
     #===========================================================================
-    
-    
     fxsShape = ET.SubElement(fxsExport,'Shape',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
     fxsProperties = ET.SubElement(fxsShape,'Properties')
     #===========================================================================
     # end of xml export block 01
     #===========================================================================
-
     #===========================================================================
     # opacity export
     #===========================================================================
@@ -191,7 +209,6 @@ def bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
     # shape overlay color
     #===========================================================================
 #     print allAttributes.getValue(0,'ro'),allAttributes.getValue(0,'go'),allAttributes.getValue(0,'bo')
-    
     fxsOutlineColor = ET.SubElement(fxsProperties, 'Property', {'constant':'True','id':'outlineColor'})
     fxsOutlineColorValue = ET.SubElement(fxsOutlineColor, 'Value')
     fxsOutlineColorValue.text = "(" + str(allAttributes.getValue(0,'ro')) + "," + str(allAttributes.getValue(0,'go'))+ "," + str(allAttributes.getValue(0,'bo'))+ ")"
@@ -276,6 +293,7 @@ def bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport):
                 break                
             if cancel:
                 break
+            
             point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
             point_lt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.leftTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.leftTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
             point_rt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.rightTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.rightTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
@@ -353,12 +371,11 @@ def silhouetteFxsExporter():
     k.setTooltip("Set the framerange to bake the shapes, by default its the project start-end. Example: 10-20")
     p.addKnob(k)
     k.setValue("%s-%s" % (nuke.root().firstFrame(), nuke.root().lastFrame()))    
-    #===========================================================================
-#     k = nuke.Boolean_Knob("rev", "Reverse Bezier Tangents")
-#     k.setFlag(nuke.STARTLINE)
-#     k.setTooltip("If the imported shapes tangents are wrong, check this box.")
-#     p.addKnob(k)
-#     
+    k = nuke.Boolean_Knob("bake", "Bake Shapes")
+    k.setFlag(nuke.STARTLINE)
+    k.setTooltip("Bake the shapes, removing layers and transforms")
+    p.addKnob(k)
+     
     #===========================================================================
 #     may not be needed after all
     # k = nuke.Enumeration_Knob('sourceCurveType', 'Shapes Software Source', ['Nuke', 'Mocha', 'Silhouette'])
@@ -393,6 +410,7 @@ def silhouetteFxsExporter():
     
     if nuke.NUKE_VERSION_MAJOR > 6:
         nukescripts.node_copypaste()
+        bakeshapes =  p.knobs()["bake"].value() 
 #         sourceCurveType = p.knobs()["sourceCurveType"].value() 
 #         reverse = p.knobs()["rev"].value()
         rptsw_shapeList = []
@@ -404,9 +422,17 @@ def silhouetteFxsExporter():
         nodeFormat = rotoNode['format'].value()
         fxsExport = ET.Element('Silhouette',{'width':str(nodeFormat.width()),'height':str(nodeFormat.height()),'workRangeStart':str(fRange.first()),'workRangeEnd':str(fRange.last()),'sessionStartFrame':str(fRange.first())})
         
-        for shape in rptsw_shapeList[::-1]: #reverse list order to get the correct order on Silhouette
-            if isinstance(shape[0], nuke.rotopaint.Shape):
-                    bakeShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport)
+        
+        if bakeshapes:
+            for shape in rptsw_shapeList[::-1]: #reverse list order to get the correct order on Silhouette
+                if isinstance(shape[0], nuke.rotopaint.Shape):
+                        createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
+        else:
+            for layer in rptsw_shapeList[::-1]:
+                if isinstance(layer[0], nuke.rotopaint.Layer):
+                    createLayers(layer,fRange, rotoNode, rptsw_shapeList,task, fxsExport)
+                if isinstance(layer[0], nuke.rotopaint.Shape):      
+                    createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         rotoCurve.changed()
     else:
         nuke.message( 'Shape Exporter is for Nuke v7 only' )
@@ -442,4 +468,90 @@ def silhouetteFxsExporter():
 
 if __name__ == '__main__':
     silhouetteFxsExporter()
+
+def createRect(rotoCurve):
+    '''
+    just a perfect rectangle creator
+    '''
+    curve = rp.Shape(rotoCurve)
+    pt1 = rp.ShapeControlPoint(0,0,1)
+    pt2 = rp.ShapeControlPoint(1920,0,1)
+    pt3 = rp.ShapeControlPoint(1920,1080,1)
+    pt4 = rp.ShapeControlPoint(0,1080,1)
+    curve.append(pt1)
+    curve.append(pt2)
+    curve.append(pt3)
+    curve.append(pt4)
+    rotoCurve.rootLayer.append(curve)
+#===============================================================================
+# FUNCIONOU!!!
+#===============================================================================
+
+# cpin node usado: 
+# set cut_paste_input [stack 0]
+# version 7.0 v8
+# push $cut_paste_input
+# CornerPin2D {
+#  to1 {{curve x44 341.65} {curve x44 369.5}}
+#  to2 {{curve x44 1792.53} {curve x44 8.42}}
+#  to3 {{curve x44 1638.41} {curve x44 807.99}}
+#  to4 {187.5 1169.24}
+#  invert false
+#  motionblur 1
+#  shutteroffset centred
+#  from1 {-0.888889 0.5}
+#  from2 {0.888889 0.5}
+#  from3 {0.888889 -0.5}
+#  from4 {-0.888889 -0.5}
+#  name CornerPin2D1from_POINT_3_Tracker2
+#  tile_color 0xff00ff
+#  selected true
+#  xpos -334
+#  ypos -323
+# }
+
+
+
+def getTheCornerpinAsMatrix():
+    projectionMatrixTo = nuke.math.Matrix4()
+    projectionMatrixFrom = nuke.math.Matrix4()
+    
+    #dir(projectionMatrix)
+    theCornerpinNode = nuke.selectedNode()
+    imageWidth = float(theCornerpinNode.width())
+    imageHeight = float(theCornerpinNode.height())
+    
+
+    to1x, to1y = theCornerpinNode['to1'].value() 
+    to2x, to2y = theCornerpinNode['to2'].value()
+    to3x, to3y = theCornerpinNode['to3'].value()
+    to4x, to4y = theCornerpinNode['to4'].value()
+    print to1x, to1y
+    to1x =  worldToImageTransform(to1x,"x")
+    to2x =  worldToImageTransform(to2x,"x")
+    to3x =  worldToImageTransform(to3x,"x")
+    to4x =  worldToImageTransform(to4x,"x")
+    to1y =  worldToImageTransform(to1y,"y")
+    to2y =  worldToImageTransform(to2y,"y")
+    to3y =  worldToImageTransform(to3y,"y")
+    to4y =  worldToImageTransform(to4y,"y")
+    print to1x, to1y
+
+    from1x, from1y = theCornerpinNode['from1'].value()
+    from2x, from2y = theCornerpinNode['from2'].value() 
+    from3x, from3y = theCornerpinNode['from3'].value() 
+    from4x, from4y = theCornerpinNode['from4'].value() 
+
+    #usar width basead em um rectangle, exemplo 1920 = 0.08889
+
+    projectionMatrixTo.mapUnitSquareToQuad(to1x,to1y,to2x,to2y,to3x,to3y,to4x,to4y)
+    projectionMatrixFrom.mapUnitSquareToQuad(from1x,from1y,from2x,from2y,from3x,from3y,from4x,from4y)
+    
+    theCornerpinAsMatrix = projectionMatrixTo*projectionMatrixFrom.inverse()    
+    
+    print "test %s" % theCornerpinAsMatrix
+    for n in theCornerpinAsMatrix:
+        print "%f," % n,
+
+
 

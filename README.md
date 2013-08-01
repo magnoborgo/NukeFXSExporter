@@ -4,7 +4,6 @@ Nuke .fxs (Silhouette Shape format) exporter.
 This script will export Nuke shapes to a silhouette shape format .sfx file
 
 If you like it, use it frequently, or want to support further development please consider a small donation to the author.   
-
 <a href='http://www.pledgie.com/campaigns/21123'><img alt='Click here to lend your support to: VFX tools coding project and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/21123.png?skin_name=chrome' border='0' /></a>
 
 ### SUPPORTED FEATURES: ###
