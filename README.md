@@ -16,6 +16,8 @@ If you like it, use it frequently, or want to support further development please
 * Shape Inverted attribute
 * Shape Open/Closed
 * Delete repeated baked keyframes when possible
+* Layer nesting
+
 
 #### COMPATIBILITY ####
 
@@ -23,7 +25,7 @@ Nukev7 and up
 
 #### KNOW LIMITATIONS ####
 
-For now shapes will be baked on all keyframes, removing tracked layers info  and additional transforms
+Nuke animation curves are more complex then Silhouette ones, that will result in more keyframes on Silhouette.
 B-spline Tension is not supported yet
 Feather not supported
 
