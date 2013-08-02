@@ -1,6 +1,7 @@
 TODO list
 ===============
 * remove not used functions and calls
+* remove time from popup dialog
 * Verify if root layers with transforms are working correctly
 * May need to check layer/shape name uniqueness before creating the export
 * Figure out the rectangle tangents issue that happens sometimes:    Draw a rectangle bezier and the tangets will be exported swapped.
