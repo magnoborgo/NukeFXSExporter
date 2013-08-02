@@ -122,9 +122,11 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     allAttributes = layer[0].getAttributes()
     
     print "Creating layer", layer[0].name
-    if layer[1].name != "Root":
+    if layer[0].name == layer[1].name: #(its the root)
+        fxsLayer = ET.SubElement(fxsExport,'Layer',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
+    else:
         layermatch = False
-        layerlist = fxsExport.findall('Layer')
+        layerlist = fxsExport.findall('.//Object')
         for layeritem in layerlist:
             if layeritem.get('label') == layer[1].name:
                 layermatch = True
@@ -136,7 +138,7 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
                         fxsLayer = ET.SubElement(item,'Object',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
                 break
         if not layermatch:
-            layerlist = fxsExport.findall('.//Object')
+            layerlist = fxsExport.findall('.//Layer')
             for layeritem in layerlist:
                 if layeritem.get('label') == layer[1].name:
                     layermatch = True
@@ -147,8 +149,7 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
                             print "found object tag for layer", layer[1].name
                             fxsLayer = ET.SubElement(item,'Object',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
                     break
-    else:
-        fxsLayer = ET.SubElement(fxsExport,'Layer',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
+            
     
     fxsProperties = ET.SubElement(fxsLayer,'Properties')
     #===========================================================================
@@ -242,12 +243,22 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     #===========================================================================
     # Assign shapes to parent layers
     #===========================================================================
-    if shape[1].name != "Root":
-        layerlist = fxsExport.findall('Layer')
-        layermatch = False
+    layerlist = fxsExport.findall('Layer')
+    layermatch = False
+    for layer in layerlist:
+        if layer.get('label') == shape[1].name:
+            layermatch = True
+            print "Matched", layer.get('label'), "parent of", shape[0].name
+            obj = layer.findall("Properties/Property")
+            for item in obj:
+                if item.get('id') == "objects":
+                    print "found object tag for layer", shape[1].name
+                    fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
+            break
+    if not layermatch:
+        layerlist = fxsExport.findall('.//Object')    
         for layer in layerlist:
             if layer.get('label') == shape[1].name:
-                layermatch = True
                 print "Matched", layer.get('label'), "parent of", shape[0].name
                 obj = layer.findall("Properties/Property")
                 for item in obj:
@@ -255,21 +266,10 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
                         print "found object tag for layer", shape[1].name
                         fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
                 break
-        if not layermatch:
-            layerlist = fxsExport.findall('.//Object')    
-            for layer in layerlist:
-                if layer.get('label') == shape[1].name:
-                    print "Matched", layer.get('label'), "parent of", shape[0].name
-                    obj = layer.findall("Properties/Property")
-                    for item in obj:
-                        if item.get('id') == "objects":
-                            print "found object tag for layer", shape[1].name
-                            fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
-                    break
-        
-        
-    else:
-        fxsShape = ET.SubElement(fxsExport,'Shape',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
+    
+    
+#     else:
+#         fxsShape = ET.SubElement(fxsExport,'Shape',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
         
     fxsProperties = ET.SubElement(fxsShape,'Properties')
     #===========================================================================
@@ -594,7 +594,13 @@ def silhouetteFxsExporter():
         nodeFormat = rotoNode['format'].value()
         fxsExport = ET.Element('Silhouette',{'width':str(nodeFormat.width()),'height':str(nodeFormat.height()),'workRangeStart':str(fRange.first()),'workRangeEnd':str(fRange.last()),'sessionStartFrame':str(fRange.first())})
         
-        
+
+
+        #=======================================================================
+        # create the root layer first
+        #=======================================================================
+        item = [rotoRoot,rotoRoot]
+        createLayers(item,fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         #=======================================================================
         # if bakeshapes:
         #     for shape in rptsw_shapeList[::-1]: #reverse list order to get the correct order on Silhouette
@@ -611,14 +617,15 @@ def silhouetteFxsExporter():
         #=======================================================================
         # create all shapes in the root layer
         #=======================================================================
-        for item in rptsw_shapeList[::-1]:    
-            if isinstance(item[0], nuke.rotopaint.Shape) and item[1].name == "Root":  
-                    createShapes(item, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
+        #=======================================================================
+        # for item in rptsw_shapeList[::-1]:    
+        #     if isinstance(item[0], nuke.rotopaint.Shape) and item[1].name == "Root":  
+        #             createShapes(item, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
+        #=======================================================================
             
         #===================================================================
         # reorder layers/shapes
         #===================================================================
-#         for item in rptsw_shapeList[::-1]:     
         layerlist = []
         for item in rptsw_shapeList[::-1]:
             if item[1].name not in layerlist:#find all parent names
@@ -640,17 +647,17 @@ def silhouetteFxsExporter():
             #===============================================
             # below: find where to assign, Root or Object property form layer
             #===============================================
-            if name == "Root":
-                parentElement.append(fxsExport)
-            else:
-                for itemx in fxsExport.findall('.//*'):
-                    if itemx.get('label') == name:
-                        obj = itemx.findall("Properties/Property")
-                        print "obj", obj
-                        for item in obj:
-                            if item.get('id') == "objects":
-                                  parentElement.append(item)
-                                  break
+#             if name == "Root":
+#                 parentElement.append(fxsExport)
+#             else:
+            for itemx in fxsExport.findall('.//*'):
+                if itemx.get('label') == name:
+                    obj = itemx.findall("Properties/Property")
+                    print "obj", obj
+                    for item in obj:
+                        if item.get('id') == "objects":
+                              parentElement.append(item)
+                              break
 
             print "range:", range(len(data))    
             print "parentelement",parentElement, "\n"               
