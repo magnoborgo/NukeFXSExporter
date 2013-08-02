@@ -33,7 +33,6 @@ def rptsw_walker(obj, list):
 
     
 def rptsw_TransformToMatrix(point, transf, f):
-
     extramatrix = transf.evaluate(f).getMatrix()
     vector = nuke.math.Vector4(point[0], point[1], 1, 1)
     x = (vector[0] * extramatrix[0]) + (vector[1] * extramatrix[1]) + extramatrix[2] + extramatrix[3]
@@ -46,18 +45,22 @@ def rptsw_TransformToMatrix(point, transf, f):
   
 def rptsw_TransformLayers(point, Layer, f, rotoRoot, rptsw_shapeList):
     if Layer == rotoRoot:
- 
         transf = Layer.getTransform()
         newpoint = rptsw_TransformToMatrix(point, transf, f)
        
     else:
-
         transf = Layer.getTransform()
         newpoint = rptsw_TransformToMatrix(point, transf, f)
         for x in rptsw_shapeList: #look the layer parent
             if x[0] == Layer:
                 newpoint = rptsw_TransformLayers(newpoint, x[1], f, rotoRoot, rptsw_shapeList)
     return newpoint
+
+# 
+# def transformBaseLayerOnly(point, Layer, f, rotoRoot, rptsw_shapeList):
+#     transf = Layer.getTransform()
+#     newpoint = rptsw_TransformToMatrix(point, transf, f)
+#     return newpoint
 
 def rptsw_Relative_transform(relPoint, centerPoint, centerPointBaked, transf, f, rotoRoot, rptsw_shapeList, shape):
     transfRelPoint = [0,0]
@@ -112,15 +115,6 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     # <Layer type="Layer" id="0" label="Layer 1" selected="True" expanded="True" uuid="6BFA7E72-AB79-48A7-BC5A-079A8F5651C8">
     #===========================================================================
     '''
-    #===========================================================================
-    # verify layer rptsw ordering and if parenting can be done afterwards
-    # 
-    # verify layer ordering and if parenting can be done afterwards
-    # 
-    # verify layer ordering and if parenting can be done afterwards
-    # 
-    # verify layer ordering and if parenting can be done afterwards
-    #===========================================================================
     global cancel
     rotoCurve = rotoNode['curves']
     rotoRoot = rotoCurve.rootLayer
@@ -200,7 +194,8 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     curvetype = ""
     print "Creating shape", shape[0].name
     shapeRawInfo = shape[0].serialise()
-    #print shapeRawInfo
+#     print "RAW:",shapeRawInfo 
+
     shapeRawInfo = shapeRawInfo.split('\n')
     if [True for string in ["{curvegroup ", "{cubiccurve "] if shapeRawInfo[0].count(string) > 0]:
         curve = shapeRawInfo[0].split()
@@ -209,11 +204,16 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     shapetype = "Bezier" if curvetype == "bezier" else "Bspline"
     
     #matrixtoLayer(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport)
-    
+#     print "RAW2:",shapeRawInfo   
     #===========================================================================
     # get shape flags / cubic curve flags
     #===========================================================================
-    shapeFlags = int(shapeRawInfo[0].split()[2])
+    try: 
+        shapeFlags = int(shapeRawInfo[0].split()[2])
+    except:
+        if nuke.GUI:
+            nuke.message('ERROR! Aborting Script.\nDeselect any curves/layers on the node before running it again.' ) 
+        
     shapeFlags = parseShapeFlags(shapeFlags)
     ccshapeFlags = shapeRawInfo[2]
     ccshapeFlags = int(ccshapeFlags[1:-1].split()[1]) #str formatting
@@ -460,7 +460,10 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
     projectionMatrixTo = nuke.math.Matrix4()
     projectionMatrixFrom = nuke.math.Matrix4()
     nodeFormat = rotoNode['format'].value()
+    rotoCurve = rotoNode['curves']
+    rotoRoot = rotoCurve.rootLayer
     transf = item[0].getTransform()
+    print "trans matrix:",transf.evaluate(0).getMatrix()
     thematrix = ET.SubElement(fxsLayer,'Property',{'id':'transform.matrix'})
 #     print nodeFormat.width()
     for f in fRange:
@@ -475,6 +478,12 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         to2 = rptsw_TransformToMatrix(to2, transf, f)
         to3 = rptsw_TransformToMatrix(to3, transf, f)
         to4 = rptsw_TransformToMatrix(to4, transf, f)
+#         
+# 
+#         to1 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
+#         to2 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
+#         to3 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
+#         to4 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
         #===========================================================================
         # convert it to image transforms
         #===========================================================================
@@ -486,7 +495,7 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         to2y =  worldToImageTransform(to2[1],rotoNode,"y")
         to3y =  worldToImageTransform(to3[1],rotoNode,"y")
         to4y =  worldToImageTransform(to4[1],rotoNode,"y")
-        print "to",to1x,to2x,to3x,to4x,to1y,to2y,to3y,to4y
+#         print "to",to1x,to2x,to3x,to4x,to1y,to2y,to3y,to4y
         
         #===========================================================================
         # from = silhouette image coordinate system
@@ -496,12 +505,12 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         from2x, from2y = [worldToImageTransform(float(nodeFormat.width()),rotoNode,"x"),0.5]
         from3x, from3y = [worldToImageTransform(float(nodeFormat.width()),rotoNode,"x"),-0.5]
         from4x, from4y = [worldToImageTransform(0.0,rotoNode,"x"),-0.5]
-        print "from", from1x,from2x,from3x,from4x,from1y,from2y,from3y,from4y
+#         print "from", from1x,from2x,from3x,from4x,from1y,from2y,from3y,from4y
     
         projectionMatrixTo.mapUnitSquareToQuad(to1x,to1y,to2x,to2y,to3x,to3y,to4x,to4y)
         projectionMatrixFrom.mapUnitSquareToQuad(from1x,from1y,from2x,from2y,from3x,from3y,from4x,from4y)
         theCornerpinAsMatrix = projectionMatrixTo*projectionMatrixFrom.inverse()
-        print theCornerpinAsMatrix 
+#         print theCornerpinAsMatrix 
         matrixkey = ET.SubElement(thematrix,'Key',{'frame':str(f-fRange.first()), 'interp':'linear'})
         #fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
         
@@ -514,7 +523,7 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
             if n < 15:
                 matrixline+= ","
         matrixkey.text = "(" + matrixline + ")"
-    print "the matrix", item[0].name, "\n" , thematrix.attrib
+#     print "the matrix", item[0].name, "\n" , thematrix.attrib
 
 def silhouetteFxsExporter():
     try:
@@ -574,14 +583,13 @@ def silhouetteFxsExporter():
     cancel = False
     
     if nuke.NUKE_VERSION_MAJOR > 6:
+        nukescripts.node_copypaste()
         bakeshapes =  p.knobs()["bake"].value() 
         rptsw_shapeList = []
         rotoNode = nuke.selectedNode()
         rotoCurve = rotoNode['curves']
         rotoRoot = rotoCurve.rootLayer
         rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
-        for n in rptsw_shapeList:
-            print n, n[0].name
         task = nuke.ProgressTask( 'Silhouette FXS Shape Exporter' )
         nodeFormat = rotoNode['format'].value()
         fxsExport = ET.Element('Silhouette',{'width':str(nodeFormat.width()),'height':str(nodeFormat.height()),'workRangeStart':str(fRange.first()),'workRangeEnd':str(fRange.last()),'sessionStartFrame':str(fRange.first())})
@@ -594,7 +602,6 @@ def silhouetteFxsExporter():
         #                 createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         # else:
         #=======================================================================
-        
         #=======================================================================
         # create all layers and shapes inside it
         #=======================================================================
@@ -652,11 +659,6 @@ def silhouetteFxsExporter():
         #===================================================================
         # end of reorder layers/shapes
         #===================================================================
-        
-   
-                    
-                
-                
     else:
         nuke.message( 'Shape Exporter is for Nuke v7 only' )
     
@@ -681,6 +683,10 @@ def silhouetteFxsExporter():
         print "Saving file to: %s" % path 
     indent(fxsExport)
     ET.ElementTree(fxsExport).write(path)
+    nuke.delete(rotoNode)
+    if cancel:
+        nuke.undo()
+        
     print "Time elapsed: %s seconds" % (time.time() - start_time)
     
 

@@ -24,10 +24,12 @@ If you like it, use it frequently, or want to support further development please
 Nukev7 and up
 
 #### KNOW LIMITATIONS ####
-
 Nuke animation curves are more complex then Silhouette ones, that will result in more keyframes on Silhouette.
 B-spline Tension is not supported yet
 Feather not supported
+
+Some users experienced errors when Layers or Curves are selected inside the Node tree.
+
 
 #### USAGE ####
 
