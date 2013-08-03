@@ -61,20 +61,20 @@ def rptsw_TransformLayers(point, Layer, f, rotoRoot, rptsw_shapeList):
 #     transf = Layer.getTransform()
 #     newpoint = rptsw_TransformToMatrix(point, transf, f)
 #     return newpoint
-
-def rptsw_Relative_transform(relPoint, centerPoint, centerPointBaked, transf, f, rotoRoot, rptsw_shapeList, shape):
-    transfRelPoint = [0,0]
-    count = 0
-    for pos in relPoint:
-        transfRelPoint[count] = centerPoint[count] + (relPoint[count] * -1)
-        count +=1
-    transfRelPoint = rptsw_TransformToMatrix(transfRelPoint, transf, f)                             
-    transfRelPoint = rptsw_TransformLayers(transfRelPoint, shape[1], f, rotoRoot, rptsw_shapeList)
-    count = 0
-    for pos in relPoint:    
-        relPoint[count] = (transfRelPoint[count] + (centerPointBaked[count] * -1)) *-1
-        count+=1
-    return relPoint
+# 
+# def rptsw_Relative_transform(relPoint, centerPoint, centerPointBaked, transf, f, rotoRoot, rptsw_shapeList, shape):
+#     transfRelPoint = [0,0]
+#     count = 0
+#     for pos in relPoint:
+#         transfRelPoint[count] = centerPoint[count] + (relPoint[count] * -1)
+#         count +=1
+#     transfRelPoint = rptsw_TransformToMatrix(transfRelPoint, transf, f)                             
+#     transfRelPoint = rptsw_TransformLayers(transfRelPoint, shape[1], f, rotoRoot, rptsw_shapeList)
+#     count = 0
+#     for pos in relPoint:    
+#         relPoint[count] = (transfRelPoint[count] + (centerPointBaked[count] * -1)) *-1
+#         count+=1
+#     return relPoint
 
 
 def worldToImageTransform(value,rotoNode,axis):
@@ -525,6 +525,18 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         matrixkey.text = "(" + matrixline + ")"
 #     print "the matrix", item[0].name, "\n" , thematrix.attrib
 
+def manageTransforms(fRange, rotoNode, rptsw_shapeList,task):
+    rotoCurve = rotoNode['curves']
+    for item in rptsw_shapeList[::-1]: 
+        if isinstance(item[0], nuke.rotopaint.Shape):
+            shapeTransf = item[0].getTransform()
+            newLayer = rp.Layer(rotoCurve)
+            newLayer.name = str(uuid.uuid4())
+            newLayer.setTransform(shapeTransf)
+            item[1].append(newLayer)
+            newLayer.append(item[0])
+            
+
 def silhouetteFxsExporter():
     try:
         rotoNode = nuke.selectedNode()
@@ -583,7 +595,11 @@ def silhouetteFxsExporter():
     cancel = False
     
     if nuke.NUKE_VERSION_MAJOR > 6:
+        #=======================================================================
+        # creates a copy of the node to modify and keep original safe
+        #=======================================================================
         nukescripts.node_copypaste()
+        #=======================================================================       
         bakeshapes =  p.knobs()["bake"].value() 
         rptsw_shapeList = []
         rotoNode = nuke.selectedNode()
@@ -591,9 +607,19 @@ def silhouetteFxsExporter():
         rotoRoot = rotoCurve.rootLayer
         rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
         task = nuke.ProgressTask( 'Silhouette FXS Shape Exporter' )
+        #=======================================================================
+        # creates additional layers to handle shape transforms
+        #=======================================================================
+        if not bakeshapes:
+            manageTransforms(fRange, rotoNode, rptsw_shapeList,task)
+        rotoCurve.changed()
+        rptsw_shapeList = []
+        rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
         nodeFormat = rotoNode['format'].value()
         fxsExport = ET.Element('Silhouette',{'width':str(nodeFormat.width()),'height':str(nodeFormat.height()),'workRangeStart':str(fRange.first()),'workRangeEnd':str(fRange.last()),'sessionStartFrame':str(fRange.first())})
         
+        
+
 
 
         #=======================================================================
@@ -602,27 +628,12 @@ def silhouetteFxsExporter():
         item = [rotoRoot,rotoRoot]
         createLayers(item,fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
         #=======================================================================
-        # if bakeshapes:
-        #     for shape in rptsw_shapeList[::-1]: #reverse list order to get the correct order on Silhouette
-        #         if isinstance(shape[0], nuke.rotopaint.Shape):
-        #                 createShapes(shape, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
-        # else:
-        #=======================================================================
-        #=======================================================================
         # create all layers and shapes inside it
         #=======================================================================
         for item in rptsw_shapeList: 
             if isinstance(item[0], nuke.rotopaint.Layer):
                 createLayers(item,fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
-        #=======================================================================
-        # create all shapes in the root layer
-        #=======================================================================
-        #=======================================================================
-        # for item in rptsw_shapeList[::-1]:    
-        #     if isinstance(item[0], nuke.rotopaint.Shape) and item[1].name == "Root":  
-        #             createShapes(item, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
-        #=======================================================================
-            
+
         #===================================================================
         # reorder layers/shapes
         #===================================================================
@@ -630,7 +641,7 @@ def silhouetteFxsExporter():
         for item in rptsw_shapeList[::-1]:
             if item[1].name not in layerlist:#find all parent names
                 layerlist.append(item[1].name)
-        print "\n\nlayerlist", layerlist
+#         print "\n\nlayerlist", layerlist
         for name in layerlist:
             print "assigning:", name
             data = []

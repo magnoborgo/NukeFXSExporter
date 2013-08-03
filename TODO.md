@@ -1,5 +1,6 @@
-TODO list
+TODO CODE list
 ===============
+* check if uuid si really  need
 * remove not used functions and calls
 * remove time from popup dialog
 * Verify if root layers with transforms are working correctly
