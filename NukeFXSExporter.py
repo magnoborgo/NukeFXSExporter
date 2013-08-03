@@ -121,7 +121,7 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     transf = layer[0].getTransform()
     allAttributes = layer[0].getAttributes()
     
-    print "Creating layer", layer[0].name
+#     print "Creating layer", layer[0].name
     if layer[0].name == layer[1].name: #(its the root)
         fxsLayer = ET.SubElement(fxsExport,'Layer',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
     else:
@@ -130,11 +130,11 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
         for layeritem in layerlist:
             if layeritem.get('label') == layer[1].name:
                 layermatch = True
-                print "Matched", layeritem.get('label'), "parent of", layer[0].name
+#                 print "Matched", layeritem.get('label'), "parent of", layer[0].name
                 obj = layeritem.findall("Properties/Property")
                 for item in obj:
                     if item.get('id') == "objects":
-                        print "found object tag for layer", layer[1].name
+#                         print "found object tag for layer", layer[1].name
                         fxsLayer = ET.SubElement(item,'Object',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
                 break
         if not layermatch:
@@ -142,11 +142,11 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
             for layeritem in layerlist:
                 if layeritem.get('label') == layer[1].name:
                     layermatch = True
-                    print "Matched", layeritem.get('label'), "parent of", layer[0].name
+#                     print "Matched", layeritem.get('label'), "parent of", layer[0].name
                     obj = layeritem.findall("Properties/Property")
                     for item in obj:
                         if item.get('id') == "objects":
-                            print "found object tag for layer", layer[1].name
+#                             print "found object tag for layer", layer[1].name
                             fxsLayer = ET.SubElement(item,'Object',{'type':'Layer', 'label':layer[0].name, 'expanded':'True'})
                     break
             
@@ -193,7 +193,7 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     if len(shape[0]) <= 1:
         return
     curvetype = ""
-    print "Creating shape", shape[0].name
+#     print "Creating shape", shape[0].name
     shapeRawInfo = shape[0].serialise()
 #     print "RAW:",shapeRawInfo 
 
@@ -213,7 +213,9 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
         shapeFlags = int(shapeRawInfo[0].split()[2])
     except:
         if nuke.GUI:
+            nuke.delete(rotoNode) #clean up cloned node
             nuke.message('ERROR! Aborting Script.\nDeselect any curves/layers on the node before running it again.' ) 
+
         
     shapeFlags = parseShapeFlags(shapeFlags)
     ccshapeFlags = shapeRawInfo[2]
@@ -248,22 +250,22 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     for layer in layerlist:
         if layer.get('label') == shape[1].name:
             layermatch = True
-            print "Matched", layer.get('label'), "parent of", shape[0].name
+#             print "Matched", layer.get('label'), "parent of", shape[0].name
             obj = layer.findall("Properties/Property")
             for item in obj:
                 if item.get('id') == "objects":
-                    print "found object tag for layer", shape[1].name
+#                     print "found object tag for layer", shape[1].name
                     fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
             break
     if not layermatch:
         layerlist = fxsExport.findall('.//Object')    
         for layer in layerlist:
             if layer.get('label') == shape[1].name:
-                print "Matched", layer.get('label'), "parent of", shape[0].name
+#                 print "Matched", layer.get('label'), "parent of", shape[0].name
                 obj = layer.findall("Properties/Property")
                 for item in obj:
                     if item.get('id') == "objects":
-                        print "found object tag for layer", shape[1].name
+#                         print "found object tag for layer", shape[1].name
                         fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
                 break
     
@@ -349,10 +351,9 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakesha
     #===========================================================================
     fxsPath = ET.SubElement(fxsProperties, 'Property', {'id':'path'})
     for point in shape[0]:
-        task.setMessage( 'baking ' + shape[0].name + ' point ' + str(count+1) + " of " + str(len(shape[0])) )#
+        task.setMessage( 'Working ' + shape[0].name + ' point ' + str(count+1) + " of " + str(len(shape[0])) )#
         if cancel:
             return
-
         newtypes = [point.center,point.leftTangent, point.rightTangent]#, point.featherLeftTangent, point.featherRightTangent]
         #===============================================================
         # bake all the keyframes before starting processing point
@@ -463,7 +464,7 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
     rotoCurve = rotoNode['curves']
     rotoRoot = rotoCurve.rootLayer
     transf = item[0].getTransform()
-    print "trans matrix:",transf.evaluate(0).getMatrix()
+#     print "trans matrix:",transf.evaluate(0).getMatrix()
     thematrix = ET.SubElement(fxsLayer,'Property',{'id':'transform.matrix'})
 #     print nodeFormat.width()
     for f in fRange:
@@ -526,16 +527,91 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
 #     print "the matrix", item[0].name, "\n" , thematrix.attrib
 
 def manageTransforms(fRange, rotoNode, rptsw_shapeList,task):
+    '''
+    creates parent layers and transfer shapes transforms to them
+    '''
+    #===========================================================================
+    # need to
+    # check if shape has transforms
+    # check if extramatrix is present
+    #===========================================================================
+    global cancel
     rotoCurve = rotoNode['curves']
+    createdLayers = []
+    taskCount = 0
+    taskLenght = len(rptsw_shapeList[::-1])
+    
     for item in rptsw_shapeList[::-1]: 
+
+        task.setMessage('Preparing Shapes and Layers')
+        if cancel:
+            return
+        task.setProgress(int(taskCount/taskLenght * 100 ))
+        taskCount +=1
+        
         if isinstance(item[0], nuke.rotopaint.Shape):
-            shapeTransf = item[0].getTransform()
-            newLayer = rp.Layer(rotoCurve)
-            newLayer.name = str(uuid.uuid4())
-            newLayer.setTransform(shapeTransf)
-            item[1].append(newLayer)
-            newLayer.append(item[0])
+            #===================================================================
+            # original code
+            #===================================================================
+#             shapeTransf = item[0].getTransform()
+#             newLayer = rp.Layer(rotoCurve)
+#             newLayer.name = str(uuid.uuid4())
+#             newLayer.setTransform(shapeTransf)
+#             item[1].append(newLayer)
+#             newLayer.append(item[0])
+            #===================================================================
+            # eof original code
+            #===================================================================
             
+#             print item[1].name, len(item[1])
+            
+#             if item[1] not in createdLayers:
+            #===================================================================
+            createdLayers.append(item[1])
+            shapeTransf = item[0].getTransform()
+            if len(item[1]) > 1: #apply to a new layer
+                newLayer = rp.Layer(rotoCurve)
+                newLayer.name = str(uuid.uuid4())
+                newLayer.setTransform(shapeTransf)
+                item[1].append(newLayer)
+                newLayer.append(item[0])
+            else: 
+                #===============================================================
+                # this shape is single child, transfer its transform info to the parent layer
+                #===============================================================
+                newLayer = rp.Layer(rotoCurve)
+                newLayerTransf = newLayer.getTransform()
+                matrixCurves = []
+                for i in range(4):
+                    matrixCurves.append([])
+                    for j in range(4):
+                        matrixCurves[i].append(newLayerTransf.getExtraMatrixAnimCurve(i, j))
+                parentTranf = item[1].getTransform()
+                #===============================================================
+                # transfer the matrix to the new temporary layer
+                #===============================================================
+                for f in fRange:
+                    m1 = shapeTransf.evaluate(f).getMatrix()
+                    m2 = parentTranf.evaluate(f).getMatrix()
+                    m3 = m2 * m1
+#                     print "getitem", m3.__getitem__(16)#[0][0]
+                    m = 0
+                    for i in range(4):
+                        for j in range(4):
+#                             print  matrixCurves[i][j]
+                            matrixCurves[i][j].addKey(f,m3.__getitem__(m))
+                            m+=1
+#                     print m3, "\n", m4
+                newLayerTransf = newLayer.getTransform()
+                item[1].setTransform(newLayerTransf)
+                if newLayerTransf == shapeTransf:
+                    print "info is the same"
+#                 item[1].append(newLayer)
+#                 newLayer.append(item[0])
+            #===================================================================
+                    
+                
+                
 
 def silhouetteFxsExporter():
     try:
@@ -605,14 +681,28 @@ def silhouetteFxsExporter():
         rotoNode = nuke.selectedNode()
         rotoCurve = rotoNode['curves']
         rotoRoot = rotoCurve.rootLayer
+        #=*=*=*=*=*=*===========================================================
+        # Task related code
+        #=*=*=*=*=*=*===========================================================
+        task = nuke.ProgressTask('Silhouette FXS Shape Exporter')
+        task.setMessage('Starting FXS export')
+        #=*=*=*=*=*=*===========================================================
         rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
-        task = nuke.ProgressTask( 'Silhouette FXS Shape Exporter' )
         #=======================================================================
         # creates additional layers to handle shape transforms
         #=======================================================================
         if not bakeshapes:
             manageTransforms(fRange, rotoNode, rptsw_shapeList,task)
-        rotoCurve.changed()
+#             return
+        #=*=*=*=*=*=*===========================================================
+        # Task related code
+        #=*=*=*=*=*=*===========================================================
+        if cancel:
+            return
+        #=*=*=*=*=*=*===========================================================
+        
+        rotoCurve.changed() #just for debugging purposes
+        #=======================================================================
         rptsw_shapeList = []
         rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
         nodeFormat = rotoNode['format'].value()
@@ -643,7 +733,7 @@ def silhouetteFxsExporter():
                 layerlist.append(item[1].name)
 #         print "\n\nlayerlist", layerlist
         for name in layerlist:
-            print "assigning:", name
+#             print "assigning:", name
             data = []
             parentElement = []
             for item in rptsw_shapeList[::-1]:
@@ -651,10 +741,10 @@ def silhouetteFxsExporter():
                     for itemx in fxsExport.findall('.//*'):
                         if itemx.get('label') != None:
                             if item[0].name == itemx.get('label'):
-                                print "  match", item[0].name, itemx.get('label')
+#                                 print "  match", item[0].name, itemx.get('label')
                                 if itemx not in data:
                                     data.append(itemx) #locate the elements of that parent
-            print "data from",name, data
+#             print "data from",name, data
             #===============================================
             # below: find where to assign, Root or Object property form layer
             #===============================================
@@ -664,14 +754,14 @@ def silhouetteFxsExporter():
             for itemx in fxsExport.findall('.//*'):
                 if itemx.get('label') == name:
                     obj = itemx.findall("Properties/Property")
-                    print "obj", obj
+#                     print "obj", obj
                     for item in obj:
                         if item.get('id') == "objects":
                               parentElement.append(item)
                               break
 
-            print "range:", range(len(data))    
-            print "parentelement",parentElement, "\n"               
+#             print "range:", range(len(data))    
+#             print "parentelement",parentElement, "\n"               
             for n in range(len(data)):
                 parentElement[0][n] = data[n]
         #===================================================================
@@ -679,7 +769,15 @@ def silhouetteFxsExporter():
         #===================================================================
     else:
         nuke.message( 'Shape Exporter is for Nuke v7 only' )
-    
+
+    #=*=*=*=*=*=*===========================================================
+    # Task related code
+    #=*=*=*=*=*=*===========================================================
+    if cancel:
+        nuke.delete(rotoNode)
+        return
+    #=*=*=*=*=*=*===========================================================
+
     #===========================================================================
     # EXPORT the fxs file
     #===========================================================================
@@ -699,12 +797,14 @@ def silhouetteFxsExporter():
                  path =  os.path.join(base,ext)
     else:
         print "Saving file to: %s" % path 
+
     indent(fxsExport)
     ET.ElementTree(fxsExport).write(path)
     nuke.delete(rotoNode)
-    if cancel:
-        nuke.undo()
-        
+#     
+#     if cancel:
+#         nuke.undo()
+#         
     print "Time elapsed: %s seconds" % (time.time() - start_time)
     
 
