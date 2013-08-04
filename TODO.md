@@ -1,5 +1,6 @@
 TODO CODE list
 ===============
+* check opacity and other animated properties for linear keyframes
 * remove not used functions and calls
 * remove time from popup dialog
 * Figure out the rectangle tangents issue that happens sometimes:    Draw a rectangle bezier and the tangets will be exported swapped.
