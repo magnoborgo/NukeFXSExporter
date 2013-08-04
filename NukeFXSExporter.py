@@ -185,9 +185,21 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     #===========================================================================
     fxsObj = ET.SubElement(fxsProperties, 'Property', {'id':'objects','constant':'True','expanded':'True'})
 
-    for item in rptsw_shapeList[::-1]: #create all shapes in this layer    
-        if isinstance(item[0], nuke.rotopaint.Shape) and item[1].name == layer[0].name:   
-            createShapes(item, fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
+    taskLenght=len(layer[0])
+    taskCount =0
+    
+    for item in rptsw_shapeList[::-1]: #create all shapes in this layer 
+        if isinstance(item[0], nuke.rotopaint.Shape) and item[1].name == layer[0].name: 
+            #=*=*=*=*=*=*===========================================================  
+            taskCount+=1 
+            task.setProgress(int(taskCount/taskLenght * 100 ))
+            if task.isCancelled():
+                cancel = True
+                break                
+            if cancel:
+                break
+            #=*=*=*=*=*=*=========================================================== 
+            createShapes(item, fRange, rotoNode, rptsw_shapeList,task2, fxsExport,bakeshapes)
     
 def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakeshapes):
     #=*=*=*=*=*=*===========================================================    
@@ -200,20 +212,14 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     #===========================================================================
     if len(shape[0]) <= 1:
         return
+    
     curvetype = ""
-#     print "Creating shape", shape[0].name
     shapeRawInfo = shape[0].serialise()
-#     print "RAW:",shapeRawInfo 
-
     shapeRawInfo = shapeRawInfo.split('\n')
     if [True for string in ["{curvegroup ", "{cubiccurve "] if shapeRawInfo[0].count(string) > 0]:
         curve = shapeRawInfo[0].split()
         curvetype = curve[3]
-
     shapetype = "Bezier" if curvetype == "bezier" else "Bspline"
-    
-    #matrixtoLayer(shape, fRange, rotoNode, rptsw_shapeList,task,fxsExport)
-#     print "RAW2:",shapeRawInfo   
     #===========================================================================
     # get shape flags / cubic curve flags
     #===========================================================================
@@ -229,15 +235,12 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     ccshapeFlags = shapeRawInfo[2]
     ccshapeFlags = int(ccshapeFlags[1:-1].split()[1]) #str formatting
     ccshapeFlags  = parseShapeFlags(ccshapeFlags)
-#     flags = int(flags.split()[1])
     #===========================================================================
     global cancel
-    count = 0
     rotoCurve = rotoNode['curves']
     rotoRoot = rotoCurve.rootLayer
     transf = shape[0].getTransform()
     allAttributes = shape[0].getAttributes()
-  
     #===========================================================================
     # xml export block 01
     #===========================================================================
@@ -249,7 +252,6 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     #===========================================================================
     # visibility end
     #===========================================================================
-    
     #===========================================================================
     # Assign shapes to parent layers
     #===========================================================================
@@ -258,29 +260,21 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     for layer in layerlist:
         if layer.get('label') == shape[1].name:
             layermatch = True
-#             print "Matched", layer.get('label'), "parent of", shape[0].name
             obj = layer.findall("Properties/Property")
             for item in obj:
                 if item.get('id') == "objects":
-#                     print "found object tag for layer", shape[1].name
                     fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
             break
     if not layermatch:
         layerlist = fxsExport.findall('.//Object')    
         for layer in layerlist:
             if layer.get('label') == shape[1].name:
-#                 print "Matched", layer.get('label'), "parent of", shape[0].name
                 obj = layer.findall("Properties/Property")
                 for item in obj:
                     if item.get('id') == "objects":
-#                         print "found object tag for layer", shape[1].name
                         fxsShape = ET.SubElement(item,'Object',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
                 break
-    
-    
-#     else:
-#         fxsShape = ET.SubElement(fxsExport,'Shape',{'type':'Shape', 'label':shape[0].name, 'shape_type':shapetype, 'hidden':hidden,'locked':locked})
-        
+
     fxsProperties = ET.SubElement(fxsShape,'Properties')
     #===========================================================================
     # end of xml export block 01
@@ -295,10 +289,14 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     if allAttributes.getCurve('opc').getNumberOfKeys() > 0:
         fxsOpacity = ET.SubElement(fxsProperties, 'Property', {'id':'opacity'})
         for key in range(0,allAttributes.getCurve('opc').getNumberOfKeys()):
-#             print "key",key
-            fxsOpcKey =  ET.SubElement(fxsOpacity ,'Key',{'frame':str(allAttributes.getKeyTime(opcindex,key)-fRange.first()), 'interp':'hold'})
+            #===================================================================
+            # interpolation 257 = HOLD            
+            #===================================================================
+            keyinterpolation = allAttributes.getCurve('opc').getKey(key).interpolationType
+            keyinterpolation = "hold" if keyinterpolation == 257 else "linear" 
+            
+            fxsOpcKey =  ET.SubElement(fxsOpacity ,'Key',{'frame':str(allAttributes.getKeyTime(opcindex,key)-nuke.root().firstFrame()), 'interp':keyinterpolation})
             fxsOpcKey.text = str(allAttributes.getValue(allAttributes.getKeyTime(opcindex,key),'opc')*100)
-#            newshapeattrib.addKey(allAttributes.getKeyTime(n,key),allAttributes.getName(n),allAttributes.getValue(allAttributes.getKeyTime(n,key),n))
     else:
         fxsOpacity = ET.SubElement(fxsProperties, 'Property', {'constant':'True','id':'opacity'})
         fxsOpacityValue = ET.SubElement(fxsOpacity, 'Value')
@@ -358,49 +356,53 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     # shape inverted end
     #===========================================================================
     fxsPath = ET.SubElement(fxsProperties, 'Property', {'id':'path'})
-    for point in shape[0]:
-        task.setMessage( 'Working ' + shape[0].name + ' point ' + str(count+1) + " of " + str(len(shape[0])) )#
-        if cancel:
-            return
-        newtypes = [point.center,point.leftTangent, point.rightTangent]#, point.featherLeftTangent, point.featherRightTangent]
-        #===============================================================
-        # bake all the keyframes before starting processing point
-        #===============================================================
-        for f in fRange:
-            task.setProgress(int( float(f)/fRange.last() * 100 ))
-            if task.isCancelled():
-                cancel = True
-                break                
-            if cancel:
-                break
-            transf.addTransformKey(f)
-            point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
-            newtypes[0].addPositionKey(f, (point_c[0],point_c[1]))
-            
-        #===============================================================
-        # end of baking process
-        #===============================================================
-        count+=1
+    #===========================================================================
+    # for point in shape[0]:
+    #     task.setMessage( 'Working ' + shape[0].name + ' point ' + str(count+1) + " of " + str(len(shape[0])) )#
+    #     if cancel:
+    #         return
+    #     newtypes = [point.center,point.leftTangent, point.rightTangent]#, point.featherLeftTangent, point.featherRightTangent]
+    #     #===============================================================
+    #     # bake all the keyframes before starting processing point
+    #     #===============================================================
+    #     for f in fRange:
+    #         task.setProgress(int( float(f)/fRange.last() * 100 ))
+    #         if task.isCancelled():
+    #             cancel = True
+    #             break                
+    #         if cancel:
+    #             break
+    #         transf.addTransformKey(f)
+    #         point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
+    #         newtypes[0].addPositionKey(f, (point_c[0],point_c[1]))
+    #     #===============================================================
+    #     # end of baking process
+    #     #===============================================================
+    #     count+=1
+    #===========================================================================
 
     pathclosed = False if "eOpenFlag" in ccshapeFlags else True
+    
     for f in fRange:
-        task2.setProgress(10+int(f))
-        fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-fRange.first()), 'interp':'linear'})
+        
+        fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'})
         fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
-#         <Path closed="True" type="Bspline">
-#         <Key frame="-1" interp="linear">
-
+        taskCount = 0
         for point in shape[0]:
+            #=*=*=*=*=*=*===========================================================  
+            task.setMessage( 'Working ' + shape[0].name + ' point ' + str(taskCount+1) + " of " + str(len(shape[0])) )
+            taskCount+=1
+            task.setProgress(int( taskCount/len(shape[0])* 100 ))
             if task.isCancelled():
                 cancel = True
                 break                
             if cancel:
                 break
+            #=*=*=*=*=*=*===========================================================  
             point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
             point_lt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.leftTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.leftTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
             point_rt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.rightTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.rightTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
             transf = shape[0].getTransform()
-
             if bakeshapes: #bake the point position based on shape/parent layers transforms
                 point_c = rptsw_TransformToMatrix(point_c, transf, f)                    
                 point_c = rptsw_TransformLayers(point_c, shape[1], f, rotoRoot, rptsw_shapeList)
@@ -415,35 +417,50 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
             rtx = point_rt[0]
             lty = point_lt[1]
             rty = point_rt[1]
-
             x = worldToImageTransform(x,rotoNode,"x")
             y = worldToImageTransform(y,rotoNode,"y")  
             ltx = worldToImageTransform(ltx,rotoNode,"x")
             lty = worldToImageTransform(lty,rotoNode,"y")
             rtx = worldToImageTransform(rtx,rotoNode,"x")
             rty = worldToImageTransform(rty,rotoNode,"y")
-
             fxsPoint = ET.SubElement(fxsPathKeyPath ,'Point')#"",text = "tst")
             if shapetype == "Bspline":
                 fxsPoint.text = "(%f,%f)" % (x,y) #%f otherwise silhouette may reject the imported shapes.
             else:
                 fxsPoint.text = "(%f,%f),(%f,%f),(%f,%f)" % (x,y,rtx,rty,ltx,lty)
-
-            
-
-
     #===========================================================================
     # remove repeated keyframes optimization
     #===========================================================================
+    if cancel:
+        return
+    #=*=*=*=*=*=*===========================================================  
     shapePath = fxsShape.findall(".//Path")
     removelist = []
+#     print "testing for repeated"
     for n in range(len(shapePath)):#[::-1]:
         if n > 0 and n < len(shapePath)-1:
             totalp = 0
             for nn in range(len(shapePath[n])):
+                #===============================================================
+                # remove float decimal places from the numbers for comparison
+                #===============================================================
+                roundness = -3
                 #if this keyframe is equal to previous and next one
-                if shapePath[n][nn].text == shapePath[n-1][nn].text and shapePath[n][nn].text == shapePath[n+1][nn].text:
+                actual = shapePath[n][nn].text[1:-1].split(",")
+                actual[0] = actual[0][:roundness]
+                actual[1] = actual[1][:roundness]
+                prev = shapePath[n-1][nn].text[1:-1].split(",")
+                prev[0] = prev[0][:roundness]
+                prev[1] = prev[1][:roundness]
+                next = shapePath[n+1][nn].text[1:-1].split(",")
+                next[0] = next[0][:roundness]
+                next[1] = next[1][:roundness]
+                if actual == prev and actual == next:
                     totalp +=1
+#                     print actual, prev, next##
+                
+#                 if shapePath[n][nn].text == shapePath[n-1][nn].text and shapePath[n][nn].text == shapePath[n+1][nn].text:
+#                     totalp +=1
             if totalp == len(shapePath[n]):
                 removelist.append(n)
     mainpath = fxsShape.findall(".//Property")
@@ -521,7 +538,7 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         projectionMatrixFrom.mapUnitSquareToQuad(from1x,from1y,from2x,from2y,from3x,from3y,from4x,from4y)
         theCornerpinAsMatrix = projectionMatrixTo*projectionMatrixFrom.inverse()
 #         print theCornerpinAsMatrix 
-        matrixkey = ET.SubElement(thematrix,'Key',{'frame':str(f-fRange.first()), 'interp':'linear'})
+        matrixkey = ET.SubElement(thematrix,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'}) #it was fRange.first()
         #fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
         
         #=======================================================================
@@ -665,7 +682,7 @@ def silhouetteFxsExporter():
     #===========================================================================
     # panel setup
     #===========================================================================
-    p = nukescripts.panels.PythonPanel("Silhouette Shape Exporter  %s" % time.ctime())
+    p = nukescripts.panels.PythonPanel("FXS Shape Exporter")
     k = nuke.String_Knob("framerange","FrameRange")
     k.setFlag(nuke.STARTLINE)    
     k.setTooltip("Set the framerange to bake the shapes, by default its the project start-end. Example: 10-20")
@@ -673,25 +690,10 @@ def silhouetteFxsExporter():
     k.setValue("%s-%s" % (nuke.root().firstFrame(), nuke.root().lastFrame()))    
     k = nuke.Boolean_Knob("bake", "Bake Shapes")
     k.setFlag(nuke.STARTLINE)
-    k.setTooltip("Bake the shapes, removing layers and transforms")
+    k.setTooltip("Export the shapes baking keyframes and transforms")
     p.addKnob(k)
-     
-    #===========================================================================
-#     may not be needed after all
-    # k = nuke.Enumeration_Knob('sourceCurveType', 'Shapes Software Source', ['Nuke', 'Mocha', 'Silhouette'])
-    # k.setFlag(nuke.STARTLINE)
-    # k.setTooltip("Adjust this to export Bezier handles correctly")
-    # p.addKnob(k)
-    #===========================================================================
-    
-    # k = nuke.Boolean_Knob("mt", "MultiThread")
-    # k.setFlag(nuke.STARTLINE)
-    # k.setTooltip("This will speed up the script but without an accurate progress bar")
-    # p.addKnob(k)
-    # k.setValue(True)
-    #===========================================================================
     result = p.showModalDialog()    
-    
+ 
     if result == 0:
         return # Canceled
     try:
@@ -743,8 +745,6 @@ def silhouetteFxsExporter():
             manageTransforms(fRange, rotoNode, rptsw_shapeList)#,task)
 #             return
         #=*=*=*=*=*=*===========================================================
-        # Task related code
-        #=*=*=*=*=*=*===========================================================
         if cancel:
             return
         #=*=*=*=*=*=*===========================================================
@@ -753,20 +753,13 @@ def silhouetteFxsExporter():
         #=======================================================================
         rptsw_shapeList = []
         rptsw_shapeList = rptsw_walker(rotoRoot, rptsw_shapeList)  
-
-
-        
-
         nodeFormat = rotoNode['format'].value()
         fxsExport = ET.Element('Silhouette',{'width':str(nodeFormat.width()),'height':str(nodeFormat.height()),'workRangeStart':str(fRange.first()),'workRangeEnd':str(fRange.last()),'sessionStartFrame':str(fRange.first())})
-        
-
         #=======================================================================
         # create the root layer first
         #=======================================================================
         item = [rotoRoot,rotoRoot]
         createLayers(item,fRange, rotoNode, rptsw_shapeList,task, fxsExport,bakeshapes)
-
         #=*=*=*=*=*=*===========================================================
         # Task related code
         #=*=*=*=*=*=*===========================================================
@@ -775,16 +768,17 @@ def silhouetteFxsExporter():
         taskLength = len(rptsw_shapeList)
         taskCount = 0.0
         #=*=*=*=*=*=*===========================================================
-        
         #=======================================================================
-        # create all layers and shapes inside it
+        # create all layers and shapes inside them
         #=======================================================================
         for item in rptsw_shapeList:
-
             taskCount +=1.0
             x = (taskCount/taskLength)*10+30
             task.setProgress(30+int((taskCount/taskLength)*20))
-
+            #=*=*=*=*=*=*===========================================================
+            if cancel:
+                break
+            #=*=*=*=*=*=*===========================================================
             if isinstance(item[0], nuke.rotopaint.Layer):
                 createLayers(item,fRange, rotoNode, rptsw_shapeList,task,fxsExport,bakeshapes)
         #===================================================================
@@ -794,10 +788,6 @@ def silhouetteFxsExporter():
         for item in rptsw_shapeList[::-1]:
             if item[1].name not in layerlist:#find all parent names
                 layerlist.append(item[1].name)
-#         print "\n\nlayerlist", layerlist
-
-
-
         #=*=*=*=*=*=*===========================================================
         # Task related code
         #=*=*=*=*=*=*===========================================================
@@ -810,8 +800,9 @@ def silhouetteFxsExporter():
             #=*=*=*=*=*=*===========================================================
             task.setProgress(50+int((taskCount/taskLength)*50))
             taskCount +=1.0
+            if cancel:
+                break
             #=*=*=*=*=*=*===========================================================
-#             print "assigning:", name
             data = []
             parentElement = []
             for item in rptsw_shapeList[::-1]:
@@ -819,27 +810,15 @@ def silhouetteFxsExporter():
                     for itemx in fxsExport.findall('.//*'):
                         if itemx.get('label') != None:
                             if item[0].name == itemx.get('label'):
-#                                 print "  match", item[0].name, itemx.get('label')
                                 if itemx not in data:
                                     data.append(itemx) #locate the elements of that parent
-#             print "data from",name, data
-            #===============================================
-            # below: find where to assign, Root or Object property form layer
-            #===============================================
-#             if name == "Root":
-#                 parentElement.append(fxsExport)
-#             else:
             for itemx in fxsExport.findall('.//*'):
                 if itemx.get('label') == name:
                     obj = itemx.findall("Properties/Property")
-#                     print "obj", obj
                     for item in obj:
                         if item.get('id') == "objects":
                               parentElement.append(item)
                               break
-
-#             print "range:", range(len(data))    
-#             print "parentelement",parentElement, "\n"               
             for n in range(len(data)):
                 parentElement[0][n] = data[n]
         #===================================================================
@@ -869,7 +848,9 @@ def silhouetteFxsExporter():
          else:
              base = os.path.split(path)[0]
              ext = os.path.split(path)[1][-4:]
-             #adds extension if not present on the filename
+             #==================================================================
+             # adds extension if not present on the filename
+             #==================================================================
              if ext != ".fxs": 
                  ext = ext + ".fxs"
                  path =  os.path.join(base,ext)
@@ -879,10 +860,6 @@ def silhouetteFxsExporter():
     indent(fxsExport)
     ET.ElementTree(fxsExport).write(path)
     nuke.delete(rotoNode)
-#     
-#     if cancel:
-#         nuke.undo()
-#         
     task.setProgress(100)  
     print "Time elapsed: %s seconds" % (time.time() - start_time)
 

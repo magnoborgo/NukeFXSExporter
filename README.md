@@ -8,8 +8,8 @@ If you like it, use it frequently, or want to support further development please
 
 ### SUPPORTED FEATURES: ###
 
-* Shape position/animation (baked)
-* Shape Opacity Animation
+* Shape position/animation
+* Shape Opacity (Linear/Constant keyframes)
 * Shape Motion Blur
 * Shape Overlay Color
 * Shape Blending Modes
@@ -27,9 +27,6 @@ Nukev7 and up
 Nuke animation curves are more complex then Silhouette ones, that will result in more keyframes on Silhouette.
 B-spline Tension is not supported yet
 Feather not supported
-
-Some users experienced errors when Layers or Curves are selected inside the Node tree.
-
 
 #### USAGE ####
 
