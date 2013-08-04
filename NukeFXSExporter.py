@@ -535,6 +535,20 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         matrixkey.text = "(" + matrixline + ")"
 #     print "the matrix", item[0].name, "\n" , thematrix.attrib
 
+
+def checkEqualTransform(shape1,shape2,fRange):
+    check = True
+    shape1Transf = shape1.getTransform()
+    shape2Transf = shape2.getTransform()    
+    for f in fRange:
+        m1 = shape1Transf.evaluate(f).getMatrix()
+        m2 = shape2Transf.evaluate(f).getMatrix()
+        if m1 != m2:
+            check = False
+            break
+            
+    return check
+    
 def manageTransforms(fRange, rotoNode, rptsw_shapeList):#,task):
     '''
     creates parent layers and transfer shapes transforms to them
@@ -546,14 +560,15 @@ def manageTransforms(fRange, rotoNode, rptsw_shapeList):#,task):
     #===========================================================================
     global cancel
     rotoCurve = rotoNode['curves']
-    createdLayers = []
+    createdShapes = []
     
+    #=*=*=*=*=*=*===========================================================
     task = nuke.ProgressTask('Manage Transforms')
     taskCount = 0
-    taskLenght = len(rptsw_shapeList[::-1])
+    taskLenght = len(rptsw_shapeList)
     #=*=*=*=*=*=*===========================================================
 
-    for item in rptsw_shapeList:#[::-1]: 
+    for item in rptsw_shapeList: 
         #=*=*=*=*=*=*===========================================================
         # Task related code
         #=*=*=*=*=*=*===========================================================
@@ -564,18 +579,36 @@ def manageTransforms(fRange, rotoNode, rptsw_shapeList):#,task):
         taskCount +=1
         #=*=*=*=*=*=*===========================================================
         if isinstance(item[0], nuke.rotopaint.Shape):
-            createdLayers.append(item[1])
-            shapeTransf = item[0].getTransform()
+            #===================================================================
+            # optimization: verify if shapes share the very same transform data and put them on the same layer
+            #===================================================================
+            sametransform = False
+            for shape in createdShapes:
+                if shape[1].name == item[1].name: #share the same parent
+                    if checkEqualTransform(item[0],shape[0],fRange):
+                        sametransform = True
+                        sameparent = shape[3]
+                        break
+            createdShapes.append(item)                
+            #===================================================================
+            
+            shapeTransf = item[0].getTransform()           
             if len(item[1]) > 1: #apply to a new layer
-                newLayer = rp.Layer(rotoCurve)
-                newLayer.name = item[0].name + "_trkdata" #str(uuid.uuid4())
-                newLayer.setTransform(shapeTransf)
-                item[1].append(newLayer)
-                newLayer.append(item[0])
+                if not sametransform:
+                    newLayer = rp.Layer(rotoCurve)
+                    newLayer.name = item[0].name + "_trkdata" #str(uuid.uuid4())
+                    newLayer.setTransform(shapeTransf)
+                    item[1].append(newLayer)
+                    newLayer.append(item[0])
+                    createdShapes[-1].append(newLayer)
+#                     print "appended layer", createdShapes[-1]
+                else:
+                    sameparent.append(item[0])
             else: 
                 #===============================================================
-                # this shape is single child, transfer its transform info to the parent layer
+                # this shape is single child, transfer the transform data to the parent layer
                 #===============================================================
+
                 newLayer = rp.Layer(rotoCurve)
                 newLayerTransf = newLayer.getTransform()
                 matrixCurves = []
