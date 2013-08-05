@@ -383,8 +383,96 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
 
     pathclosed = False if "eOpenFlag" in ccshapeFlags else True
     
-    for f in fRange:
+    
+    #===========================================================================
+    # check if all the point elements (center and tangents) are linear/hold keyframes nd store it for further optimization
+    #===========================================================================
+    keyframeTimes = []
+    n =0
+    keyframeTimes = {}
+    for point in shape[0]:
+        pts = [point.center.getPositionAnimCurve(0),point.center.getPositionAnimCurve(1),
+               point.leftTangent.getPositionAnimCurve(0),point.leftTangent.getPositionAnimCurve(1),
+               point.rightTangent.getPositionAnimCurve(0),point.rightTangent.getPositionAnimCurve(1)]
+        curvenames = ["cx","cy","ltx","lty","rtx","rty"]
+        for ptype in range(len(pts)):
+            print "pt",n, "eval",  curvenames[ptype]
+            keys = pts[ptype].getNumberOfKeys()
+            for key in range(keys):
+                #===============================================================
+                # check if current key is in the dict and abort if is already invalid.
+                #===============================================================
+                if pts[ptype].getKey(key).time not in keyframeTimes:
+                    print "adding",  pts[ptype].getKey(key).time 
+                    keyframeTimes[pts[ptype].getKey(key).time] = True
+                else:
+                    if keyframeTimes.get(pts[ptype].getKey(key).time):
+                        acceptKeyframe = False
+#                         print "KEY:", key
+                        #===========================================================
+                        # if a key rslope == to next key lslope, interpolation is linear
+                        # 257 = hold keyframe
+                        #===========================================================
+        #                 if keys == 2 and key == 1: 
+        #                     if pts[ptype].getKey(key-1).rslope == pts[ptype].getKey(key).lslope:
+        #                         print "LINEAR"   
+        #                         
+                        if key > 0 :#and key < keys-1:
+#                             print pts[ptype].getKey(key-1).rslope, pts[ptype].getKey(key).lslope
+#                             print n, curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
+                            if pts[ptype].getKey(key-1).rslope == pts[ptype].getKey(key).lslope:
+                                print "LINEAR"
+                                acceptKeyframe = True
+                            if pts[ptype].getKey(key).interpolationType in ["257","258"]:
+                                print "CONSTANT (hold)"
+                                acceptKeyframe = True
+                        elif key == 0:
+                            print "eval f0", pts[ptype].getKey(key).interpolationType
+#                             print n, "THIS IS FIRST KEY",curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
+                            if pts[ptype].getKey(key).rslope == pts[ptype].getKey(key+1).lslope and pts[ptype].getKey(key).interpolationType in [256,257,258]:
+                                print "LINEAR or HOLD"
+                                acceptKeyframe = True
+                            elif keys == 1:
+                                acceptKeyframe = True
         
+                        if not acceptKeyframe:
+                            print "setting %s to false" % pts[ptype].getKey(key).time
+                            keyframeTimes[pts[ptype].getKey(key).time] = False
+                                
+        #                 elif key == keys-1:
+        #                     print n, "THIS IS LAST KEY",curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
+        #                 print "\n"
+        #                 
+        #                 if pts[ptype].getKey(key).time not in keyframeTimes:
+        #                      keyframeTimes.append(pts[ptype].getKey(key).time)
+                    else:
+                        print "aborted"
+        # 
+    #                     
+#     print keyframeTimes 
+
+
+                     #==============================================================
+                     # ver se os keyfraes sao aplicados individualmente mesmo, por ponto
+                     # ver se x, y sao separados memos
+                     #
+                     #==============================================================
+                     #==============================================================
+                     # check for linear or constant keyframes and store only them?
+                     #==============================================================
+                     #==============================================================
+                     # check for linear or constant keyframes and store only them?
+                     #==============================================================
+                     #==============================================================
+                     # check for linear or constant keyframes and store only them?
+                     #==============================================================
+                     
+        n+=1
+    print "curveKeyframes",  keyframeTimes
+        
+    
+    
+    for f in fRange:
         fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'})
         fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
         taskCount = 0
