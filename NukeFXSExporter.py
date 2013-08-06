@@ -200,6 +200,9 @@ def createLayers(layer, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
                 break
             #=*=*=*=*=*=*=========================================================== 
             createShapes(item, fRange, rotoNode, rptsw_shapeList,task2, fxsExport,bakeshapes)
+            
+            
+            
     
 def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakeshapes):
     #=*=*=*=*=*=*===========================================================    
@@ -396,126 +399,105 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
                point.rightTangent.getPositionAnimCurve(0),point.rightTangent.getPositionAnimCurve(1)]
         curvenames = ["cx","cy","ltx","lty","rtx","rty"]
         for ptype in range(len(pts)):
-            print "pt",n, "eval",  curvenames[ptype]
+#             print "pt",n, "eval",  curvenames[ptype]
             keys = pts[ptype].getNumberOfKeys()
             for key in range(keys):
                 #===============================================================
                 # check if current key is in the dict and abort if is already invalid.
                 #===============================================================
                 if pts[ptype].getKey(key).time not in keyframeTimes:
-                    print "adding",  pts[ptype].getKey(key).time 
+#                     print "adding",  pts[ptype].getKey(key).time 
                     keyframeTimes[pts[ptype].getKey(key).time] = True
                 else:
                     if keyframeTimes.get(pts[ptype].getKey(key).time):
                         acceptKeyframe = False
-#                         print "KEY:", key
-                        #===========================================================
-                        # if a key rslope == to next key lslope, interpolation is linear
-                        # 257 = hold keyframe
-                        #===========================================================
-        #                 if keys == 2 and key == 1: 
-        #                     if pts[ptype].getKey(key-1).rslope == pts[ptype].getKey(key).lslope:
-        #                         print "LINEAR"   
-        #                         
-                        if key > 0 :#and key < keys-1:
-#                             print pts[ptype].getKey(key-1).rslope, pts[ptype].getKey(key).lslope
-#                             print n, curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
+                        if key > 0 :
                             if pts[ptype].getKey(key-1).rslope == pts[ptype].getKey(key).lslope:
-                                print "LINEAR"
+#                                 print "LINEAR"
                                 acceptKeyframe = True
                             if pts[ptype].getKey(key).interpolationType in ["257","258"]:
-                                print "CONSTANT (hold)"
+#                                 print "CONSTANT (hold)"
                                 acceptKeyframe = True
                         elif key == 0:
-                            print "eval f0", pts[ptype].getKey(key).interpolationType
-#                             print n, "THIS IS FIRST KEY",curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
+#                             print "eval f0", pts[ptype].getKey(key).interpolationType
                             if pts[ptype].getKey(key).rslope == pts[ptype].getKey(key+1).lslope and pts[ptype].getKey(key).interpolationType in [256,257,258]:
-                                print "LINEAR or HOLD"
+#                                 print "LINEAR or HOLD"
                                 acceptKeyframe = True
                             elif keys == 1:
                                 acceptKeyframe = True
-        
                         if not acceptKeyframe:
-                            print "setting %s to false" % pts[ptype].getKey(key).time
+#                             print "setting %s to false" % pts[ptype].getKey(key).time
                             keyframeTimes[pts[ptype].getKey(key).time] = False
-                                
-        #                 elif key == keys-1:
-        #                     print n, "THIS IS LAST KEY",curvenames[ptype], pts[ptype].getKey(key).time,pts[ptype].getKey(key).interpolationType, pts[ptype].getKey(key).la, pts[ptype].getKey(key).ra, pts[ptype].getKey(key).lslope, pts[ptype].getKey(key).rslope
-        #                 print "\n"
-        #                 
-        #                 if pts[ptype].getKey(key).time not in keyframeTimes:
-        #                      keyframeTimes.append(pts[ptype].getKey(key).time)
-                    else:
-                        print "aborted"
-        # 
-    #                     
-#     print keyframeTimes 
-
-
-                     #==============================================================
-                     # ver se os keyfraes sao aplicados individualmente mesmo, por ponto
-                     # ver se x, y sao separados memos
-                     #
-                     #==============================================================
-                     #==============================================================
-                     # check for linear or constant keyframes and store only them?
-                     #==============================================================
-                     #==============================================================
-                     # check for linear or constant keyframes and store only them?
-                     #==============================================================
-                     #==============================================================
-                     # check for linear or constant keyframes and store only them?
-                     #==============================================================
-                     
         n+=1
-    print "curveKeyframes",  keyframeTimes
-        
+#     print "curveKeyframes",  keyframeTimes
     
     
+ 
+ 
+    keys = sorted(keyframeTimes.items(), key=lambda x: x[0])
+    #===========================================================================
+    # removes unwanted keyframes before fRange start
+    #===========================================================================
+    for key in range(len(keys))[::-1]:
+        if keys[key][0] < int(fRange.first()):
+            keys.pop(key)
+            
+   #===========================================================================
+    # creates the keyframes for the curve points, skipping baked frames for linear/hold keyframes
+    #===========================================================================
+    n = 0
     for f in fRange:
-        fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'})
-        fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
-        taskCount = 0
-        for point in shape[0]:
-            #=*=*=*=*=*=*===========================================================  
-            task.setMessage( 'Working ' + shape[0].name + ' point ' + str(taskCount+1) + " of " + str(len(shape[0])) )
-            taskCount+=1
-            task.setProgress(int( taskCount/len(shape[0])* 100 ))
-            if task.isCancelled():
-                cancel = True
-                break                
-            if cancel:
-                break
-            #=*=*=*=*=*=*===========================================================  
-            point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
-            point_lt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.leftTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.leftTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
-            point_rt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.rightTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.rightTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
-            transf = shape[0].getTransform()
-            if bakeshapes: #bake the point position based on shape/parent layers transforms
-                point_c = rptsw_TransformToMatrix(point_c, transf, f)                    
-                point_c = rptsw_TransformLayers(point_c, shape[1], f, rotoRoot, rptsw_shapeList)
-                point_lt = rptsw_TransformToMatrix(point_lt, transf, f)  
-                point_lt  = rptsw_TransformLayers(point_lt, shape[1], f, rotoRoot, rptsw_shapeList)
-                point_rt = rptsw_TransformToMatrix(point_rt, transf, f)  
-                point_rt  = rptsw_TransformLayers(point_rt, shape[1], f, rotoRoot, rptsw_shapeList)
-
-            x = point_c[0]
-            y = point_c[1]
-            ltx = point_lt[0]
-            rtx = point_rt[0]
-            lty = point_lt[1]
-            rty = point_rt[1]
-            x = worldToImageTransform(x,rotoNode,"x")
-            y = worldToImageTransform(y,rotoNode,"y")  
-            ltx = worldToImageTransform(ltx,rotoNode,"x")
-            lty = worldToImageTransform(lty,rotoNode,"y")
-            rtx = worldToImageTransform(rtx,rotoNode,"x")
-            rty = worldToImageTransform(rty,rotoNode,"y")
-            fxsPoint = ET.SubElement(fxsPathKeyPath ,'Point')#"",text = "tst")
-            if shapetype == "Bspline":
-                fxsPoint.text = "(%f,%f)" % (x,y) #%f otherwise silhouette may reject the imported shapes.
-            else:
-                fxsPoint.text = "(%f,%f),(%f,%f),(%f,%f)" % (x,y,rtx,rty,ltx,lty)
+#         print "frame", f, keys[n]
+#         if f >0:
+        if not keys[n][1] and f <= keys[n][0] or keys[n][1] and f == keys[n][0] or f in [fRange.first(),fRange.last()]:
+#             print f,#
+            fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'})
+            fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
+            taskCount = 0
+            for point in shape[0]:
+                #=*=*=*=*=*=*===========================================================  
+                task.setMessage( 'Working ' + shape[0].name + ' point ' + str(taskCount+1) + " of " + str(len(shape[0])) )
+                taskCount+=1
+                task.setProgress(int( taskCount/len(shape[0])* 100 ))
+                if task.isCancelled():
+                    cancel = True
+                    break                
+                if cancel:
+                    break
+                #=*=*=*=*=*=*===========================================================  
+                point_c = [point.center.getPositionAnimCurve(0).evaluate(f),point.center.getPositionAnimCurve(1).evaluate(f)]
+                point_lt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.leftTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.leftTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
+                point_rt =[point.center.getPositionAnimCurve(0).evaluate(f)+(point.rightTangent.getPositionAnimCurve(0).evaluate(f)*-1),point.center.getPositionAnimCurve(1).evaluate(f)+(point.rightTangent.getPositionAnimCurve(1).evaluate(f)*-1)]
+                transf = shape[0].getTransform()
+                if bakeshapes: #bake the point position based on shape/parent layers transforms
+                    point_c = rptsw_TransformToMatrix(point_c, transf, f)                    
+                    point_c = rptsw_TransformLayers(point_c, shape[1], f, rotoRoot, rptsw_shapeList)
+                    point_lt = rptsw_TransformToMatrix(point_lt, transf, f)  
+                    point_lt  = rptsw_TransformLayers(point_lt, shape[1], f, rotoRoot, rptsw_shapeList)
+                    point_rt = rptsw_TransformToMatrix(point_rt, transf, f)  
+                    point_rt  = rptsw_TransformLayers(point_rt, shape[1], f, rotoRoot, rptsw_shapeList)
+    
+                x = point_c[0]
+                y = point_c[1]
+                ltx = point_lt[0]
+                rtx = point_rt[0]
+                lty = point_lt[1]
+                rty = point_rt[1]
+                x = worldToImageTransform(x,rotoNode,"x")
+                y = worldToImageTransform(y,rotoNode,"y")  
+                ltx = worldToImageTransform(ltx,rotoNode,"x")
+                lty = worldToImageTransform(lty,rotoNode,"y")
+                rtx = worldToImageTransform(rtx,rotoNode,"x")
+                rty = worldToImageTransform(rty,rotoNode,"y")
+                fxsPoint = ET.SubElement(fxsPathKeyPath ,'Point')#"",text = "tst")
+                if shapetype == "Bspline":
+                    fxsPoint.text = "(%f,%f)" % (x,y) #%f otherwise silhouette may reject the imported shapes.
+                else:
+                    fxsPoint.text = "(%f,%f),(%f,%f),(%f,%f)" % (x,y,rtx,rty,ltx,lty)
+        if f == keys[n][0] and keys[n][0] != keys[-1][0]:    
+            n+=1
+                    
+                
     #===========================================================================
     # remove repeated keyframes optimization
     #===========================================================================
@@ -524,7 +506,6 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     #=*=*=*=*=*=*===========================================================  
     shapePath = fxsShape.findall(".//Path")
     removelist = []
-#     print "testing for repeated"
     for n in range(len(shapePath)):#[::-1]:
         if n > 0 and n < len(shapePath)-1:
             totalp = 0
@@ -545,10 +526,6 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
                 next[1] = next[1][:roundness]
                 if actual == prev and actual == next:
                     totalp +=1
-#                     print actual, prev, next##
-                
-#                 if shapePath[n][nn].text == shapePath[n-1][nn].text and shapePath[n][nn].text == shapePath[n+1][nn].text:
-#                     totalp +=1
             if totalp == len(shapePath[n]):
                 removelist.append(n)
     mainpath = fxsShape.findall(".//Property")
@@ -593,12 +570,6 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         to2 = rptsw_TransformToMatrix(to2, transf, f)
         to3 = rptsw_TransformToMatrix(to3, transf, f)
         to4 = rptsw_TransformToMatrix(to4, transf, f)
-#         
-# 
-#         to1 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
-#         to2 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
-#         to3 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
-#         to4 = rptsw_TransformLayers(to1, item[0], f, rotoRoot, rptsw_shapeList)
         #===========================================================================
         # convert it to image transforms
         #===========================================================================
@@ -625,7 +596,6 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
         projectionMatrixTo.mapUnitSquareToQuad(to1x,to1y,to2x,to2y,to3x,to3y,to4x,to4y)
         projectionMatrixFrom.mapUnitSquareToQuad(from1x,from1y,from2x,from2y,from3x,from3y,from4x,from4y)
         theCornerpinAsMatrix = projectionMatrixTo*projectionMatrixFrom.inverse()
-#         print theCornerpinAsMatrix 
         matrixkey = ET.SubElement(thematrix,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'}) #it was fRange.first()
         #fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
         
@@ -638,8 +608,50 @@ def matrixtoLayer(item, fRange, rotoNode, rptsw_shapeList,task,fxsLayer):
             if n < 15:
                 matrixline+= ","
         matrixkey.text = "(" + matrixline + ")"
-#     print "the matrix", item[0].name, "\n" , thematrix.attrib
-
+        
+        
+        #===========================================================================
+        # remove repeated keyframes optimization
+        #===========================================================================
+        if cancel:
+            return
+        #=*=*=*=*=*=*===========================================================  
+        shapePath = fxsLayer.findall(".//Property")
+#         print shapePath
+        removelist = []
+        for prop in shapePath:
+#             print prop.attrib
+#         for n in range(len(shapePath)):#[::-1]:
+            if prop.attrib.get('id') == "transform.matrix":
+#                 print "found matrix", prop.attrib
+                keys = prop.findall(".//Key")
+#                 print keys
+                for n in range(len(keys)):#[::-1]:
+                    if n > 0 and n < len(keys)-1:
+                        totalp = 0
+#                         print n, keys[n].text
+                        actual = keys[n].text
+                        prev = keys[n-1].text
+                        next = keys[n+1].text
+                        if actual == prev and actual == next:
+#                             print "found"
+#                             totalp +=1
+#                         if totalp == len(shapePath[n]):
+                            removelist.append(n)
+        mainpath = fxsLayer.findall(".//Property")
+        for prop in mainpath:
+            if prop.attrib.get('id') == "transform.matrix":
+                keys = prop.findall(".//Key")
+                keysn = len(keys)-1
+                for k in keys[::-1]:
+                    if keysn in removelist:
+                        prop.remove(k)
+       
+                    keysn -=1
+            
+        
+        
+        
 
 def checkEqualTransform(shape1,shape2,fRange):
     check = True
