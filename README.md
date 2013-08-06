@@ -28,13 +28,12 @@ You can find my contact info at http://boundaryvfx.com/tools
 Nukev7 and up
 
 #### KNOW LIMITATIONS ####
-Nuke animation curves are more complex than Silhouette ones, that will result in more keyframes depending on the keyframe interpolation
-B-spline Tension not supported yet
-Feather not supported
-
-Rectangles are exported incorrectly (swapped tangents). 
-Workaround: smooth and cusp the points back, it will fix the tangents.
-
+* Nuke animation curves are more complex than Silhouette ones, that will result in more keyframes depending on the keyframe interpolation
+* B-spline Tension not supported yet
+* Feather not supported
+* Rectangles are exported incorrectly (swapped tangents). 
+  > Workaround: smooth and cusp the points back, it will fix the tangents.
+* For heavy scenes, the script might take a while to give the task feedback, be patient.
 
 #### USAGE ####
 
