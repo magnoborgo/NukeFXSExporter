@@ -2,6 +2,7 @@ NukeFXSExporter
 ===============
 Nuke .fxs (Silhouette Shape format) exporter.
 
+
 This script will export Nuke shapes to a Silhouette Roto and Paint shape format .fxs file.    
 That allows a Mocha to Silhouette shape export using Nuke.
 
@@ -47,5 +48,8 @@ You can set a the default folder/file path on init.py or menu.py with the code b
 
     os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile'
 
+#### Thanks ####
+Kudos to the Silhouette team: Paul Miller and Perry Kivolowitz that helped me with important info.
+
 #### Licensing ####
-This script is made avalable under a BSD Style license that is included with the package.
+This script is made available under a BSD Style license that is included with the package.
