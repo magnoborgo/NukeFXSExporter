@@ -12,10 +12,10 @@ You can find my contact info at http://boundaryvfx.com/tools
 
 ### SUPPORTED FEATURES: ###
 
-**Version 2.0: initial release Aug 5th 2013
+**Version 2.0: initial release Aug 5th 2013**
 
 This version introduces Shapes and Layers transforms exports: meaning "tracking data (point/cpin)" export
-and avoiding baking the keyframes everywhere.**
+and avoiding baking the keyframes everywhere.
 
 * Shape position/animation
 * Shape Opacity (Linear/Constant keyframes)
