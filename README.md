@@ -2,10 +2,6 @@ NukeFXSExporter
 ===============
 Nuke .fxs (Silhouette Shape format) exporter.
 
-<<<<<<< HEAD
-
-=======
->>>>>>> branch 'master' of https://github.com/magnoborgo/NukeFXSExporter.git
 This script will export Nuke shapes to a Silhouette Roto and Paint shape format .fxs file.    
 That allows a Mocha to Silhouette shape export using Nuke.
 
