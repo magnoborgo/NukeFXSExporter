@@ -17,7 +17,7 @@ You can find my contact info at http://boundaryvfx.com/tools
 This version introduces Shapes and Layers transforms exports: meaning "tracking data (point/cpin)" export
 and avoiding baking the keyframes everywhere.
 
-* Shape position/animation
+* Shape Position/Animation
 * Shape Opacity (Linear/Constant keyframes)
 * Shape Motion Blur
 * Shape Overlay Color
@@ -25,8 +25,8 @@ and avoiding baking the keyframes everywhere.
 * Shape Inverted attribute
 * Shape Open/Closed
 * Delete repeated baked keyframes when possible
+* Layer/Shape Transforms (all transforms, including "extra matrix")
 * Layer nesting
-
 
 #### COMPATIBILITY ####
 
@@ -51,7 +51,7 @@ Optionally you can use the provided "menu.py" file to get a Toolbar item with th
 
 
 #### BUG REPORT ####
-Send me (contact info at http://boundaryvfx.com/tools) the Nuke Console error message and you Roto/Rotopaint node for troubleshooting.
+Send me (contact info at http://boundaryvfx.com/tools) the Nuke Console error message and your Roto/Rotopaint node for troubleshooting.
 
 
 #### Thanks ####
