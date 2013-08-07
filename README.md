@@ -47,8 +47,11 @@ You can set a the default folder/file path on init.py or menu.py with the code b
 
     os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile.fxs'
     
-
 Optionally you can use the provided "menu.py" file to get a Toolbar item with the script.
+
+
+#### BUG REPORT ####
+Send me (contact info at http://boundaryvfx.com/tools) the Nuke Console error message and you Roto/Rotopaint node for troubleshooting.
 
 
 #### Thanks ####
