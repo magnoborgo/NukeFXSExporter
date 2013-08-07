@@ -335,7 +335,6 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     #===========================================================================
     # check if all the point elements (center and tangents) share linear/hold keyframes and store them for further optimization
     #===========================================================================
-    keyframeTimes = []
     n=0
     keyframeTimes = {}
     for point in shape[0]:
@@ -375,7 +374,11 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     for key in range(len(keys))[::-1]:
         if keys[key][0] < int(fRange.first()):
             keys.pop(key)
-            
+    
+    if len(keys) == 0: #safeguard for shapes that have no keyframes at all
+        keys.append([fRange.first(),True])
+        
+    print len(keys)    
     #===========================================================================
     # Creates the keyframes for the curve points
     # skipping baked frames for linear/hold keyframes that silhouette can handle
@@ -384,6 +387,7 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     n = 0
     for f in fRange:
         if not keys[n][1] and f <= keys[n][0] or keys[n][1] and f == keys[n][0] or f in [fRange.first(),fRange.last()]:
+            
             fxsPathKey = ET.SubElement(fxsPath,'Key',{'frame':str(f-nuke.root().firstFrame()), 'interp':'linear'})
             fxsPathKeyPath = ET.SubElement(fxsPathKey,'Path',{'closed':str(pathclosed), 'type':shapetype})
             taskCount = 0

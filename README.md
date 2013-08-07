@@ -42,10 +42,14 @@ Nukev7 and up
 
 #### USAGE ####
 
-Select the Roto or Rotopaint node and run the script
+Select the Roto or Rotopaint node and run the script from the Script Editor.
 You can set a the default folder/file path on init.py or menu.py with the code below:   
 
-    os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile'
+    os.environ['FXSEXPORTPATH'] = '/path/to/your/fxsfile.fxs'
+    
+
+Optionally you can use the provided "menu.py" file to get a Toolbar item with the script.
+
 
 #### Thanks ####
 Kudos to the Silhouette team: Paul Miller and Perry Kivolowitz that helped me with important info.
