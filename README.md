@@ -5,6 +5,14 @@ Nuke .fxs (Silhouette Shape format) exporter.
 This script will export Nuke shapes to a Silhouette Roto and Paint shape format .fxs file.    
 That allows a Mocha to Silhouette shape export using Nuke.
 
+Youtube video:    
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=Xn9oegH8umo
+" target="_blank"><img src="http://img.youtube.com/vi/Xn9oegH8umo/mqdefault.jpg"
+alt="Click to Watch the video" width="240" height="135" border="10" /></a>
+
+
+
+    
 If you like it, use it frequently, or want to support further development please consider a small donation to the author.   
 <a href='http://www.pledgie.com/campaigns/21123'><img alt='Click here to lend your support to: VFX tools coding project and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/21123.png?skin_name=chrome' border='0' /></a>
 
