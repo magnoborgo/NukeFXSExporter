@@ -378,7 +378,6 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     if len(keys) == 0: #safeguard for shapes that have no keyframes at all
         keys.append([fRange.first(),True])
         
-    print len(keys)    
     #===========================================================================
     # Creates the keyframes for the curve points
     # skipping baked frames for linear/hold keyframes that silhouette can handle
