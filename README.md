@@ -14,9 +14,9 @@ alt="Click to Watch the video" width="240" height="135" border="10" /></a>
     
 If you like it, use it frequently, or want to support further development
 please consider a small donation to the author.     
-<a href='http://www.pledgie.com/campaigns/21123'><img alt='Click here to lend your support to: VFX tools coding project and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/21123.png?skin_name=chrome' border='0' /></a>
+https://www.paypal.me/mborgo
 
-You can find my contact info at http://boundaryvfx.com/tools
+You can find my contact info at http://boundaryvfx.com/research_and_development/
 
 ### SUPPORTED FEATURES: ###
 
