@@ -378,6 +378,7 @@ def createShapes(shape, fRange, rotoNode, rptsw_shapeList,task2,fxsExport,bakesh
     if len(keys) == 0: #safeguard for shapes that have no keyframes at all
         keys.append([fRange.first(),True])
         
+    print(len(keys) )   
     #===========================================================================
     # Creates the keyframes for the curve points
     # skipping baked frames for linear/hold keyframes that silhouette can handle
@@ -832,13 +833,13 @@ def silhouetteFxsExporter():
                  ext = ext + ".fxs"
                  path =  os.path.join(base,ext)
     else:
-        print "Saving file to: %s" % path 
+        print("Saving file to: %s" % path )
 
     indent(fxsExport)
     ET.ElementTree(fxsExport).write(path)
     nuke.delete(rotoNode)
     task.setProgress(100)  
-    print "Time elapsed: %s seconds" % (time.time() - start_time)
+    print("Time elapsed: %s seconds" % (time.time() - start_time))
 
 if __name__ == '__main__':
     silhouetteFxsExporter()
